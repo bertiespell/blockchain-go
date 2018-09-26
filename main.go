@@ -3,7 +3,12 @@ package main
 import (
 	"crypto/sha256"
 	"encoding/hex"
+	"log"
+	"net/http"
+	"os"
 	"time"
+
+	"github.com/gorilla/mux"
 )
 
 type Block struct {
@@ -60,4 +65,24 @@ func replaceChain(newBlocks []Block) {
 
 func main() {
 
+}
+
+// for the server
+
+func run() error {
+	mux := mux.NewRouter()
+	httpAddr := os.Getenv("ADDR")
+	log.Println("Listening on port ", os.Getenv("ADDR"))
+	s := &http.Server{
+		Addr:           ":" + httpAddr,
+		Handler:        mux,
+		ReadTimeout:    10 * time.Second,
+		WriteTimeout:   10 * time.Second,
+		MaxHeaderBytes: 1 << 20,
+	}
+
+	if err := s.ListenAndServe(); err != nil {
+		return err
+	}
+	return nil
 }
