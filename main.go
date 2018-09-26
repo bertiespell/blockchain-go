@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"io"
 	"log"
+	"net"
 	"net/http"
 	"os"
 	"sync"
@@ -23,6 +24,8 @@ type Block struct {
 	Hash      string
 	PrevHash  string
 }
+
+var bcServer chan []Block
 
 var Blockchain []Block
 
@@ -70,22 +73,39 @@ func replaceChain(newBlocks []Block) {
 
 var mutex = &sync.Mutex{}
 
+func handleConn(conn net.Conn) {
+
+}
+
 func main() {
 	err := godotenv.Load()
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	go func() {
-		t := time.Now()
-		genesisBlock := Block{}
-		genesisBlock = Block{0, t.String(), 0, calculateHash(genesisBlock), ""}
-		spew.Dump(genesisBlock)
-		mutex.Lock()
-		Blockchain = append(Blockchain, genesisBlock)
-		mutex.Unlock()
-	}()
+	bcServer := make(chan []Block)
 
+	t := time.Now()
+	genesisBlock := Block{}
+	genesisBlock = Block{0, t.String(), 0, calculateHash(genesisBlock), ""}
+	spew.Dump(genesisBlock)
+	mutex.Lock()
+	Blockchain = append(Blockchain, genesisBlock)
+	mutex.Unlock()
+
+	server, err := net.Listen("tcp", ":"+os.Getenv("TCP_PORT"))
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer server.Close() // It’s important to defer server.Close() so the connection closes cleanly when we no longer need it.
+
+	for {
+		conn, err := server.Accept()
+		if err != nil {
+			log.Fatal(err)
+		}
+		go handleConn(conn)
+	}
 	log.Fatal(run())
 }
 
