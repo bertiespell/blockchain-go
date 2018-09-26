@@ -8,13 +8,12 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"sync"
 	"time"
 
-	"github.com/joho/godotenv"
-
 	"github.com/davecgh/go-spew/spew"
-
 	"github.com/gorilla/mux"
+	"github.com/joho/godotenv"
 )
 
 type Block struct {
@@ -69,6 +68,8 @@ func replaceChain(newBlocks []Block) {
 	}
 }
 
+var mutex = &sync.Mutex{}
+
 func main() {
 	err := godotenv.Load()
 	if err != nil {
@@ -77,9 +78,12 @@ func main() {
 
 	go func() {
 		t := time.Now()
-		genesisBlock := Block{0, t.String(), 0, "", ""}
+		genesisBlock := Block{}
+		genesisBlock = Block{0, t.String(), 0, calculateHash(genesisBlock), ""}
 		spew.Dump(genesisBlock)
+		mutex.Lock()
 		Blockchain = append(Blockchain, genesisBlock)
+		mutex.Unlock()
 	}()
 
 	log.Fatal(run())
@@ -134,7 +138,10 @@ func handleWriteBlock(w http.ResponseWriter, r *http.Request) {
 
 	defer r.Body.Close()
 
+	mutex.Lock()
 	newBlock, err := generateBlock(Blockchain[len(Blockchain)-1], m.BPM)
+	mutex.Unlock()
+
 	if err != nil {
 		respondWithJSON(w, r, http.StatusInternalServerError, m)
 		return
