@@ -45,7 +45,7 @@ func generateBlock(oldBlock Block, BPM int) (Block, error) {
 	return newBlock, nil
 }
 
-func isBlockValid(oldBlock, newBlock Block) bool {
+func isBlockValid(newBlock, oldBlock Block) bool {
 
 	if oldBlock.Index+1 != newBlock.Index {
 		return false
@@ -156,7 +156,7 @@ func handleWriteBlock(w http.ResponseWriter, r *http.Request) {
 }
 
 func respondWithJSON(w http.ResponseWriter, r *http.Request, code int, payload interface{}) {
-	response, err := json.MarshalIndent(payload, "", " ")
+	response, err := json.MarshalIndent(payload, "", "  ")
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Write([]byte("HTTP 500: Internal Server Error"))
