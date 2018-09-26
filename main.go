@@ -70,7 +70,7 @@ func main() {
 // for the server
 
 func run() error {
-	mux := mux.NewRouter()
+	mux := makeMuxRouter()
 	httpAddr := os.Getenv("ADDR")
 	log.Println("Listening on port ", os.Getenv("ADDR"))
 	s := &http.Server{
@@ -85,4 +85,19 @@ func run() error {
 		return err
 	}
 	return nil
+}
+
+func makeMuxRouter() http.Handler {
+	muxRouter := mux.NewRouter()
+	muxRouter.HandleFunc("/", handleGetBlockchain).Methods("GET")
+	muxRouter.HandleFunc("/", handleWriteBlock).Methods("POST")
+	return muxRouter
+}
+
+func handleGetBlockchain(w http.ResponseWriter, r *http.Request) {
+
+}
+
+func handleWriteBlock(w http.ResponseWriter, r *http.Request) {
+
 }
