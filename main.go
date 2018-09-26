@@ -10,6 +10,8 @@ import (
 	"os"
 	"time"
 
+	"github.com/davecgh/go-spew/spew"
+
 	"github.com/gorilla/mux"
 )
 
@@ -105,6 +107,33 @@ func handleGetBlockchain(w http.ResponseWriter, r *http.Request) {
 	io.WriteString(w, string(bytes))
 }
 
+type Message struct {
+	BPM int
+}
+
 func handleWriteBlock(w http.ResponseWriter, r *http.Request) {
+	var m Message
+	decoder := json.NewDecoder(r.Body)
+	if err := decoder.Decode(&m); err != nil {
+		respondWithJSON(w, r, http.StatusBadRequest, r.Body)
+	}
+
+	defer r.Body.Close()
+
+	newBlock, err := generateBlock(Blockchain[len(Blockchain)-1], m.BPM)
+	if err != nil {
+		respondWithJSON(w, r, http.StatusInternalServerError, m)
+		return
+	}
+	if isBlockValid(newBlock, Blockchain[len(Blockchain)-1]) {
+		newBlockchain := append(Blockchain, newBlock)
+		replaceChain(newBlockchain)
+		spew.Dump(Blockchain)
+	}
+
+	respondWithJSON(w, r, http.StatusCreated, newBlock)
+}
+
+func respondWithJSON(w http.ResponseWriter, r *http.Request, code int, payload interface{} {
 
 }
