@@ -103,6 +103,23 @@ func handleConn(conn net.Conn) {
 			io.WriteString(conn, "\n Enter a new BPM:")
 		}
 	}()
+
+	// similate receiving broadcast
+
+	go func() {
+		for {
+			time.Sleep(30 * time.Second)
+			output, err := json.Marshal(Blockchain)
+			if err != nil {
+				log.Fatal(err)
+			}
+			io.WriteString(conn, string(output))
+		}
+	}()
+
+	for _ = range bcServer {
+		spew.Dump(Blockchain)
+	}
 }
 
 func main() {
@@ -117,9 +134,9 @@ func main() {
 	genesisBlock := Block{}
 	genesisBlock = Block{0, t.String(), 0, calculateHash(genesisBlock), ""}
 	spew.Dump(genesisBlock)
-	mutex.Lock()
+	// mutex.Lock()
 	Blockchain = append(Blockchain, genesisBlock)
-	mutex.Unlock()
+	// mutex.Unlock()
 
 	// start TCP and serve TCP server
 	server, err := net.Listen("tcp", ":"+os.Getenv("TCP_PORT"))
