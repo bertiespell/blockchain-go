@@ -1,13 +1,16 @@
 package main
 
 import (
+	"bufio"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
 	"io"
 	"log"
+	"net"
 	"net/http"
 	"os"
+	"strconv"
 	"sync"
 	"time"
 
@@ -24,7 +27,12 @@ type Block struct {
 	PrevHash  string
 }
 
+// Blockchain is a series of validated Blocks
 var Blockchain []Block
+
+// bcServer handles incoming concurrent Blocks
+var bcServer chan []Block
+var mutex = &sync.Mutex{}
 
 func calculateHash(block Block) string {
 	record := string(block.Index) + block.Timestamp + string(block.BPM) + block.PrevHash
@@ -68,7 +76,52 @@ func replaceChain(newBlocks []Block) {
 	}
 }
 
-var mutex = &sync.Mutex{}
+func handleConn(conn net.Conn) {
+	defer conn.Close()
+	io.WriteString(conn, "Enter a new BPM:")
+
+	scanner := bufio.NewScanner(conn)
+
+	// take in BPM from stdin and add it to blockchain after conducting necessary validation
+	go func() {
+		for scanner.Scan() {
+			bpm, err := strconv.Atoi(scanner.Text())
+			if err != nil {
+				log.Printf("%v not a number: %v", scanner.Text(), err)
+				continue
+			}
+			newBlock, err := generateBlock(Blockchain[len(Blockchain)-1], bpm)
+			if err != nil {
+				log.Println(err)
+				continue
+			}
+			if isBlockValid(newBlock, Blockchain[len(Blockchain)-1]) {
+				newBlockchain := append(Blockchain, newBlock)
+				replaceChain(newBlockchain)
+			}
+
+			bcServer <- Blockchain
+			io.WriteString(conn, "\n Enter a new BPM:")
+		}
+	}()
+
+	// similate receiving broadcast
+
+	go func() {
+		for {
+			time.Sleep(10 * time.Second)
+			output, err := json.Marshal(Blockchain)
+			if err != nil {
+				log.Fatal(err)
+			}
+			io.WriteString(conn, string(output))
+		}
+	}()
+
+	for _ = range bcServer {
+		spew.Dump(Blockchain)
+	}
+}
 
 func main() {
 	err := godotenv.Load()
@@ -76,16 +129,28 @@ func main() {
 		log.Fatal(err)
 	}
 
-	go func() {
-		t := time.Now()
-		genesisBlock := Block{}
-		genesisBlock = Block{0, t.String(), 0, calculateHash(genesisBlock), ""}
-		spew.Dump(genesisBlock)
-		mutex.Lock()
-		Blockchain = append(Blockchain, genesisBlock)
-		mutex.Unlock()
-	}()
+	t := time.Now()
+	genesisBlock := Block{}
+	genesisBlock = Block{0, t.String(), 0, calculateHash(genesisBlock), ""}
+	spew.Dump(genesisBlock)
+	// mutex.Lock()
+	Blockchain = append(Blockchain, genesisBlock)
+	// mutex.Unlock()
 
+	// start TCP and serve TCP server
+	server, err := net.Listen("tcp", ":"+os.Getenv("TCP_PORT"))
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer server.Close() // It’s important to defer server.Close() so the connection closes cleanly when we no longer need it.
+
+	for { // infinite loop where we accept new connections
+		conn, err := server.Accept()
+		if err != nil {
+			log.Fatal(err)
+		}
+		go handleConn(conn) // We want to concurrently deal with each connection through a separate handler in a Go routine go handleConn(conn), so we don’t clog up our for loop. This is how we can serve multiple connections concurrently.
+	}
 	log.Fatal(run())
 }
 
