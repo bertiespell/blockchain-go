@@ -27,9 +27,12 @@ type Block struct {
 	PrevHash  string
 }
 
-var bcServer chan []Block
-
+// Blockchain is a series of validated Blocks
 var Blockchain []Block
+
+// bcServer handles incoming concurrent Blocks
+var bcServer chan []Block
+var mutex = &sync.Mutex{}
 
 func calculateHash(block Block) string {
 	record := string(block.Index) + block.Timestamp + string(block.BPM) + block.PrevHash
@@ -73,8 +76,6 @@ func replaceChain(newBlocks []Block) {
 	}
 }
 
-var mutex = &sync.Mutex{}
-
 func handleConn(conn net.Conn) {
 	defer conn.Close()
 	io.WriteString(conn, "Enter a new BPM:")
@@ -108,7 +109,7 @@ func handleConn(conn net.Conn) {
 
 	go func() {
 		for {
-			time.Sleep(30 * time.Second)
+			time.Sleep(10 * time.Second)
 			output, err := json.Marshal(Blockchain)
 			if err != nil {
 				log.Fatal(err)
@@ -127,8 +128,6 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-
-	bcServer := make(chan []Block)
 
 	t := time.Now()
 	genesisBlock := Block{}
