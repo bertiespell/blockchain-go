@@ -333,5 +333,20 @@ func readData(rw *bufio.ReadWriter) {
 }
 
 func writeData(rw *bufio.ReadWriter) {
+	go func() {
+		for {
+			time.Sleep(5 * time.Second)
+			mutex.Lock()
+			bytes, err := json.Marshal(Blockchain)
+			if err != nil {
+				log.Fatal(err)
+			}
+			mutex.Unlock()
 
+			mutex.Lock()
+			rw.WriteString(fmt.Sprintf("%s\n", string(bytes)))
+			rw.Flush()
+			mutex.Unlock()
+		}
+	}()
 }
