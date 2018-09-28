@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	mrand "math/rand"
 	"net"
 	"net/http"
 	"os"
@@ -23,6 +24,8 @@ import (
 	libp2p "github.com/libp2p/go-libp2p"
 	crypto "github.com/libp2p/go-libp2p-crypto"
 	host "github.com/libp2p/go-libp2p-host"
+	net2 "github.com/libp2p/go-libp2p-net"
+	ma "github.com/multiformats/go-multiaddr"
 )
 
 type Block struct {
@@ -285,4 +288,24 @@ func makeBasicHost(listenPort int, secio bool, randSeed int64) (host.Host, error
 	}
 
 	return basicHost, nil
+}
+
+func handleStream(s net2.Stream) {
+	log.Println("Got a new stream!")
+
+	// create a buffer stream for non-blocking read and write
+	rw := bufio.NewReadWriter(bufio.NewReader(s), bufio.NewWriter(s))
+
+	go readData(rw)
+	go writeData(rw)
+
+	// stream s will stay open until you close it (or the other side closes it)
+}
+
+func readData(rw *bufio.ReadWriter) {
+
+}
+
+func writeData(rw *bufio.ReadWriter) {
+
 }
