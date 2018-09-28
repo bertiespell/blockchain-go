@@ -2,10 +2,10 @@ P2P Blockchain built in Go.
 
 Terminal 1:
 ```Bash
-go run main.go // open tcp server
+go run main.go -l 10001 -d <given address in the instructions> -secio
 ```
 
-Terminal 2:
+Terminal 2 (etc):
 ```Bash
-nc localhost 9000 // connect to port 9000 and post message to blockchain
+go run main.go -l 10001 -d <given address in the instructions> -secio
 ```
