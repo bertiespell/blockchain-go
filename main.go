@@ -33,17 +33,26 @@ import (
 
 // Block represents each 'item' in the blockchain
 type Block struct {
-	Index     int
-	Timestamp string
-	BPM       int
-	Hash      string
-	PrevHash  string
+	Index      int
+	Timestamp  string
+	BPM        int
+	Hash       string
+	PrevHash   string
+	Difficulty int
+	Nonce      string
 }
 
 // Blockchain is a series of validated Blocks
 var Blockchain []Block
 
 var mutex = &sync.Mutex{}
+
+const difficulty = 1
+
+func isHashValid(hash string, difficulty int) bool {
+	prefix := strings.Repeat("0", difficulty)
+	return strings.HasPrefix(hash, prefix)
+}
 
 // makeBasicHost creates a LibP2P host with a random peer ID listening on the
 // given multiaddress. It will use secio if secio is true.
@@ -201,7 +210,7 @@ func writeData(rw *bufio.ReadWriter) {
 func main() {
 	t := time.Now()
 	genesisBlock := Block{}
-	genesisBlock = Block{0, t.String(), 0, calculateHash(genesisBlock), ""}
+	genesisBlock = Block{0, t.String(), 0, calculateHash(genesisBlock), "", difficulty, ""}
 
 	Blockchain = append(Blockchain, genesisBlock)
 
@@ -304,7 +313,7 @@ func isBlockValid(newBlock, oldBlock Block) bool {
 
 // SHA256 hashing
 func calculateHash(block Block) string {
-	record := strconv.Itoa(block.Index) + block.Timestamp + strconv.Itoa(block.BPM) + block.PrevHash
+	record := strconv.Itoa(block.Index) + block.Timestamp + strconv.Itoa(block.BPM) + block.PrevHash + block.Nonce
 	h := sha256.New()
 	h.Write([]byte(record))
 	hashed := h.Sum(nil)
@@ -323,6 +332,21 @@ func generateBlock(oldBlock Block, BPM int) Block {
 	newBlock.BPM = BPM
 	newBlock.PrevHash = oldBlock.Hash
 	newBlock.Hash = calculateHash(newBlock)
+	newBlock.Difficulty = difficulty
+
+	for i := 0; ; i++ {
+		hex := fmt.Sprintf("%x", i) // take the hex representation of i
+		newBlock.Nonce = hex
+		if !isHashValid(calculateHash(newBlock), newBlock.Difficulty) {
+			fmt.Println(calculateHash(newBlock), " do more work!")
+			time.Sleep(time.Second)
+			continue
+		} else {
+			fmt.Println(calculateHash(newBlock), " work done!")
+			newBlock.Hash = calculateHash(newBlock)
+			break
+		}
+	}
 
 	return newBlock
 }
