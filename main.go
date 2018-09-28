@@ -303,7 +303,19 @@ func handleStream(s net2.Stream) {
 }
 
 func readData(rw *bufio.ReadWriter) {
-
+	for {
+		str, err := rw.ReadString('\n')
+		if err != nil {
+			log.Fatal(err)
+		}
+		if str == "" {
+			return
+		}
+		if str != "\n" {
+			chain := make([]Block, 0)
+			if err := json.Unmarshal([]byte(str), &chain);  
+		}
+	}
 }
 
 func writeData(rw *bufio.ReadWriter) {
